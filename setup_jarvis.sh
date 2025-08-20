@@ -1,116 +1,121 @@
 #!/bin/bash
-# J.A.R.V.I.S All-in-One Setup Script
-# Fully creates project structure, installs dependencies, sets up environment, and starts app
+set -e
 
 echo "[1/10] Creating project structure..."
-mkdir -p JARVIS-Cybersecurity/{client/src/{components,pages,lib,hooks},server/{routes,lib,storage},tools/{nmap,sqlmap,nikto,hashcracker,packet_analysis},shared,scripts,docs}
+mkdir -p client/src/{components,pages,hooks,lib} \
+         server/src/routes \
+         tools/{nmap,sqlmap,nikto,hashcracker,packet_analysis} \
+         shared \
+         scripts
 
 echo "[2/10] Creating environment files..."
-cat > JARVIS-Cybersecurity/.env.example <<EOL
-NODE_ENV=development
+cat > .env.example <<EOL
+# Example environment variables
 PORT=5000
-DATABASE_URL=postgresql://localhost:5432/jarvis
-SESSION_SECRET=your-session-secret
-ENABLE_REAL_SCANNING=true
-SCAN_TIMEOUT=30000
-MAX_CONCURRENT_SCANS=5
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
-OPENAI_API_KEY=your-openai-key
+MONGO_URI=mongodb://localhost:27017/jarvis
+JWT_SECRET=supersecretkey
 EOL
 
 echo "[3/10] Creating tracking.json..."
-cat > JARVIS-Cybersecurity/tracking.json <<EOL
+cat > tracking.json <<EOL
 {
-  "modules": [
-    {"name":"network_scanner","layer":1,"status":"✅ Ready","dependencies":["nmap"],"notes":"Fully functional"},
-    {"name":"web_scanner","layer":1,"status":"✅ Ready","dependencies":["nikto","sqlmap"],"notes":"Fully functional"},
-    {"name":"hashcracker","layer":1,"status":"✅ Ready","dependencies":["python","hashlib"],"notes":"Multi-algorithm"},
-    {"name":"packet_analysis","layer":1,"status":"✅ Ready","dependencies":["tshark"],"notes":"Real-time packet capture"},
-    {"name":"terminal_env","layer":0,"status":"✅ Ready","dependencies":["node","typescript"],"notes":"Full multi-language terminal"},
-    {"name":"project_management","layer":0,"status":"✅ Ready","dependencies":["git"],"notes":"Create, clone, export projects"}
-  ]
+  "modules": [],
+  "last_updated": "$(date)"
 }
 EOL
 
-echo "[4/10] Creating sample backend package.json..."
-cat > JARVIS-Cybersecurity/server/package.json <<EOL
+echo "[4/10] Creating backend package.json..."
+cat > server/package.json <<EOL
 {
   "name": "jarvis-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
-    "dotenv": "^16.0.3",
-    "pg": "^8.11.1"
+    "mongoose": "^8.4.1"
   },
   "devDependencies": {
-    "typescript": "^5.1.6",
-    "@types/node": "^20.5.3",
-    "@types/express": "^4.17.17",
-    "ts-node": "^10.9.1"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.3"
   }
 }
 EOL
 
-echo "[5/10] Creating sample frontend package.json..."
-cat > JARVIS-Cybersecurity/client/package.json <<EOL
+echo "[5/10] Creating backend tsconfig.json..."
+cat > server/tsconfig.json <<EOL
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true
+  }
+}
+EOL
+
+echo "[6/10] Creating backend index.ts..."
+cat > server/src/index.ts <<EOL
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 5000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({ message: 'JARVIS Backend Running ✅' });
+});
+
+app.listen(port, () => {
+  console.log(\`Backend server running at http://localhost:\${port}\`);
+});
+EOL
+
+echo "[7/10] Creating frontend package.json..."
+cat > client/package.json <<EOL
 {
   "name": "jarvis-frontend",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "typescript": "^5.1.6"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "vite": "^5.4.4"
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.2.0"
   }
 }
 EOL
 
-echo "[6/10] Creating sample backend index.ts..."
-mkdir -p JARVIS-Cybersecurity/server/src
-cat > JARVIS-Cybersecurity/server/src/index.ts <<EOL
-import express from 'express';
-import dotenv from 'dotenv';
-dotenv.config();
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.get('/', (req, res) => {
-  res.send('J.A.R.V.I.S Backend Running ✅');
-});
-
-app.listen(PORT, () => console.log(\`Server running on http://localhost:\${PORT}\`));
-EOL
-
-echo "[7/10] Creating sample frontend index.jsx..."
-mkdir -p JARVIS-Cybersecurity/client/src
-cat > JARVIS-Cybersecurity/client/src/main.jsx <<EOL
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-
-function App() {
-  return <h1>J.A.R.V.I.S Frontend Running ✅</h1>;
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-EOL
-
-cat > JARVIS-Cybersecurity/client/index.html <<EOL
+echo "[8/10] Creating frontend entry files..."
+cat > client/index.html <<EOL
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>J.A.R.V.I.S</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS Cybersecurity</title>
 </head>
 <body>
   <div id="root"></div>
@@ -119,15 +124,36 @@ cat > JARVIS-Cybersecurity/client/index.html <<EOL
 </html>
 EOL
 
-echo "[8/10] Installing dependencies..."
-cd JARVIS-Cybersecurity/server && npm install
-cd ../client && npm install
+cat > client/src/main.jsx <<EOL
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './pages/App';
 
-echo "[9/10] Creating Dockerfile..."
-cat > ../scripts/Dockerfile <<EOL
-# Placeholder for Dockerfile
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 EOL
 
-echo "[10/10] Setup Complete! You can now run backend and frontend:"
-echo "Backend: cd server && npm run dev"
-echo "Frontend: cd client && npm run dev"
+cat > client/src/pages/App.jsx <<EOL
+import React from 'react';
+
+export default function App() {
+  return (
+    <div style={{ fontFamily: 'Arial', padding: '2rem' }}>
+      <h1>🚀 JARVIS Cybersecurity Dashboard</h1>
+      <p>Frontend Running ✅</p>
+    </div>
+  );
+}
+EOL
+
+echo "[9/10] Installing dependencies..."
+cd server && npm install
+cd ../client && npm install
+cd ..
+
+echo "[10/10] Setup Complete ✅"
+echo "To start backend: cd server && npm run dev"
+echo "To start frontend: cd client && npm run dev"
